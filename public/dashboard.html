@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Admin</title>
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.2/dist/tailwind.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100 p-4">
+<h1 class="text-2xl font-bold mb-4">Dashboard Admin</h1>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+  <!-- Backup & Restore -->
+  <section class="bg-white p-4 rounded shadow">
+    <h2 class="text-lg font-semibold mb-2">Backup & Restore</h2>
+    <ul id="backupList" class="mb-2"></ul>
+    <button onclick="restoreBackup()" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Restore Selected</button>
+  </section>
+
+  <!-- Restart Server -->
+  <section class="bg-white p-4 rounded shadow">
+    <h2 class="text-lg font-semibold mb-2">Server Control</h2>
+    <button onclick="restartServer()" class="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700">Restart Server</button>
+  </section>
+
+  <!-- Statistik Command -->
+  <section class="bg-white p-4 rounded shadow col-span-1 md:col-span-2">
+    <h2 class="text-lg font-semibold mb-2">Statistik Realtime</h2>
+    <canvas id="dailyChart" height="200"></canvas>
+    <canvas id="limitChart" height="200" class="mt-4"></canvas>
+  </section>
+
+</div>
+
+<script>
+const token = localStorage.getItem("token");
+let selectedBackup = null;
+
+// Load backups
+async function loadBackups(){
+  const res = await fetch("/api/admin/backups",{headers:{Authorization:token}});
+  const backups = await res.json();
+  const ul = document.getElementById("backupList");
+  ul.innerHTML="";
+  backups.reverse().forEach(b=>{
+    const li=document.createElement("li");
+    li.textContent=b;
+    li.className="p-2 cursor-pointer hover:bg-gray-200";
+    li.onclick=()=>selectedBackup=b;
+    ul.appendChild(li);
+  });
+}
+
+async function restoreBackup(){
+  if(!selectedBackup) return alert("Pilih backup dulu");
+  if(!confirm(`Restore backup ${selectedBackup}?`)) return;
+  await fetch("/api/admin/restore",{method:"POST",headers:{"Content-Type":"application/json",Authorization:token},body:JSON.stringify({file:selectedBackup})});
+  alert("Restore berhasil! Server otomatis restart");
+}
+
+async function restartServer(){
+  if(!confirm("Restart server sekarang?")) return;
+  await fetch("/api/admin/restart",{method:"POST",headers:{Authorization:token}});
+  alert("Server dimulai ulang...");
+}
+
+let dailyChart, limitChart;
+
+async function loadStats(){
+  const res1 = await fetch("/api/admin/stats",{headers:{Authorization:token}});
+  const stats = await res1.json();
+  const ctx1=document.getElementById("dailyChart").getContext("2d");
+  if(dailyChart) dailyChart.destroy();
+  dailyChart = new Chart(ctx1,{type:"bar",data:{labels:Object.keys(stats),datasets:[{label:"Command per Hari",data:Object.values(stats),backgroundColor:"rgba(59,130,246,0.7)"}]},options:{responsive:true}});
+
+  const res2 = await fetch("/api/admin/limit",{headers:{Authorization:token}});
+  const limit = await res2.json();
+  const ctx2=document.getElementById("limitChart").getContext("2d");
+  if(limitChart) limitChart.destroy();
+  limitChart = new Chart(ctx2,{type:"bar",data:{labels:Object.keys(limit),datasets:[{label:"Limit User",data:Object.values(limit),backgroundColor:"rgba(220,38,38,0.7)"}]},options:{responsive:true}});
+}
+
+loadBackups();
+setInterval(loadBackups,10000);
+loadStats();
+setInterval(loadStats,10000);
+
+</script>
+</body>
+</html>
