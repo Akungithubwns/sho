@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login Admin</title>
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.2/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+  <div class="bg-white p-6 rounded shadow w-full max-w-sm">
+    <h1 class="text-2xl font-bold mb-4 text-center">Admin Login</h1>
+    <form id="loginForm">
+      <input type="text" placeholder="Username" id="username" class="w-full p-2 mb-3 border rounded">
+      <input type="password" placeholder="Password" id="password" class="w-full p-2 mb-3 border rounded">
+      <button class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Login</button>
+    </form>
+    <p id="message" class="mt-2 text-red-500 text-sm"></p>
+  </div>
+  <script>
+    const form = document.getElementById("loginForm");
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const username = document.getElementById("username").value;
+      const password = document.getElementById("password").value;
+      const res = await fetch("/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username,password})});
+      const data = await res.json();
+      if(res.ok){
+        localStorage.setItem("token", data.token);
+        window.location.href = "/dashboard.html";
+      } else {
+        document.getElementById("message").textContent = data.message;
+      }
+    });
+  </script>
+</body>
+      </html>
